@@ -418,7 +418,7 @@ server <- function(input, output, session) {
   output$model <- DT::renderDataTable(mri_files$variables_used)
 }
 title <- tags$a(href="https://mripredict.com",
-                tags$img(src("icon_back_w.png", height=50)),
+                tags$img(src="icon_back_w.png", height=50),
                 "MRIPredict")
 ui <- dashboardPage(
   title="MRIPredict",
