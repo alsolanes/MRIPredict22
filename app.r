@@ -417,14 +417,12 @@ server <- function(input, output, session) {
   output$txt_model <- renderPrint(mri_files$model_path)
   output$model <- DT::renderDataTable(mri_files$variables_used)
 }
-title <- tags$a(href="https://mripredict.com",
-                tags$img(src="icon_back_w.png", height=50),
-                "MRIPredict")
+
 ui <- dashboardPage(
   title="MRIPredict",
   skin="red",
   #useShinyalert(),
-  dashboardHeader(title=title,
+  dashboardHeader(title=span(img(src="img/icon_back_w.png",height=50),"MRIPredict"),
                   
                   tags$li(
                     a(
