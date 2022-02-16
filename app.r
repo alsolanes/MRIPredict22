@@ -61,7 +61,7 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       title = sprintf("New version available. Please update the software."),
       HTML(sprintf("New version: %s <br>
-                    You have:    %s. <br>You can find the new version <a href='https://mripredict.com'>here</a>",version_online,version))
+                    You have:    %s. <br>You can find the new version <a href='https://mripredict.com'>here</a>"))
     ))
   }
   
