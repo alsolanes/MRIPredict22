@@ -419,6 +419,7 @@ server <- function(input, output, session) {
 }
 
 ui <- dashboardPage(
+  title="MRIPredict",
   skin="red",
   #useShinyalert(),
   dashboardHeader(title=span(img(src="icon_back_w.png",height=50),"MRIPredict"),
