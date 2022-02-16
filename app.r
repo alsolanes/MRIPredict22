@@ -504,8 +504,8 @@ ui <- dashboardPage(
                     h6(textOutput("wm_selected")),
                     shinyFilesButton('wm_fu', label='White matter modulated', title='Please select WM modulated files', multiple=TRUE),
                     h6(textOutput("wmfu_selected"))
-                  ),
-                  # shinyFilesButton('gm_fu', label='Gray matter modulated', title='Please select GM modulated files', multiple=TRUE),
+                  )
+                  # , shinyFilesButton('gm_fu', label='Gray matter modulated', title='Please select GM modulated files', multiple=TRUE),
                   # h6(textOutput("gmfu_selected")),
                   # shinyFilesButton('wm_un', label='White matter', title='Please select WM unmodulated files', multiple=TRUE),
                   # h6(textOutput("wm_selected")),
