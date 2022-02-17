@@ -252,7 +252,6 @@ server <- function(input, output, session) {
   
   # CALL: CV  
   observeEvent(input$confirmCV, {
-    browser()
     removeModal()
     save_name <- sprintf('%s/%s',mri_files$folder, input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
@@ -294,7 +293,6 @@ server <- function(input, output, session) {
           attr(mp, "status")
         ))
       } else {
-        browser()
         withProgress(message = "Performing Cross-validation", value = 0, {
     
           mp <- mripredict_cv(mp, space = "NO_CHECK", save_name = save_name, folds_file = "", n_cores = 1, n_folds = mri_files$folds,
@@ -304,7 +302,6 @@ server <- function(input, output, session) {
         write.csv(mp$cv_results, file = sprintf('%s/cv_results.csv', save_name), row.names = F)
         mri_files$metrics <- mp$metrics
         write.csv(mp$metrics, file=sprintf('%s/cv_metrics.txt', save_name), row.names = F)
-        browser()
         variables_used<-.most_frequent_variables(model_list=mp$models, mp = mp,
                                                  file = sprintf("%s/%s_betas_summary.csv", save_name, input$saveName))
         mri_files$variables_used <- variables_used
