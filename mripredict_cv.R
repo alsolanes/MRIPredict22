@@ -723,6 +723,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
   file.remove(sprintf('%s_mp.rds',save_name))
   #file.remove(sprintf("%s_model_FOLD_%s_model_list.rds", save_name,n_folds))
   file.remove(sprintf("%s_model_FOLD_%s_mp.rds",save_name,n_folds))
+  cat('\n[DONE] - CV finished:')
   mp
 }
 
