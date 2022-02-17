@@ -1,13 +1,15 @@
-list.of.packages <- c("shiny", "shinyalert", "shinyFiles", "shinydashboard", "DT", "tools")
+list.of.packages <- c("shiny", "shinyalert", "shinyFiles","shinyjs", "shinydashboard", "DT", "tools")
 # TODO: 4D, FIT i PREDICT
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 # shiny
 library(shiny)
+library(shinyjs)
 library(shinyalert)
 library(shinydashboard)
 library(DT)
 library(tools)
+#install.packages('shinyFiles')
 library(shinyFiles)
 source('mripredict.r')
 source('mripredict_cv.R')
@@ -39,13 +41,16 @@ response <- predictors <- modulation <- c('None')
 version=1.0
 version_online=tryCatch(
   {
-    read.csv('https://drive.google.com/uc?export=download&id=1LAKstd-hfj39WzGTGCpACpxI8_UMmOHA')
+    id = "19YQKLO2gjR_Tf2BQFnGPSWraU8-fhA1veaZz_kcsVFs"
+    #id <- "0B-wuZ2XMFIBUd09Ob0pKVkRzQTA" # google file ID
+    v=read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
+    v$version
   },
   error = function(e) version
 )
 
 cat('\nCurrent version: MRIPredict', version)
-cat('\nLatest version available: MRIPredict', version_online$versio)
+cat('\nLatest version available: MRIPredict', version_online)
 response_family = 'binomial' 
 folder = 'output'
 modulation='un'
@@ -59,9 +64,9 @@ server <- function(input, output, session) {
   global <- reactiveValues(datapath = getwd())
   if(version_online>version){
     showModal(modalDialog(
-      title = sprintf("New version available. Please update the software."),
+      title = sprintf("New version available. Please update the software.",version_online,version),
       HTML(sprintf("New version: %s <br>
-                    You have:    %s. <br>You can find the new version <a href='https://mripredict.com'>here</a>"))
+                    You have:    %s. <br>You can find the new version <a href='https://drive.google.com/drive/folders/19jHi7q1Iuy5YHvrF2mYsaQw69EulHSF6?usp=sharing'>here</a>",version_online,version))
     ))
   }
   
@@ -76,6 +81,19 @@ server <- function(input, output, session) {
   # })
   mri_files <- reactiveValues(paths=NULL)
   observe({
+    if(!is.null(input$folder)){
+      mri_files$folder <- as.character(parseFilePaths(roots = volumes, input$folder)$datapath)
+      output$output_folder_selected <- renderText({sprintf('Output folder: %s .', mri_files$folder)})
+      #out_table$GM_unmodulated <- mri_files$paths_gm_un
+    }
+    if(!is.null(input$folder_cwd)){
+
+      if(input$folder_cwd){
+        mri_files$folder <- as.character(getwd())
+        output$output_folder_selected <- renderText({sprintf('Output folder: %s .', mri_files$folder)})
+      }
+      
+    }
     if(!is.null(input$gm_un)){
       mri_files$paths_gm_un <- as.character(parseFilePaths(roots = volumes, input$gm_un)$datapath)
       output$gm_selected <- renderText({sprintf('Selected: %s images.', length(mri_files$paths_gm_un))})
@@ -131,12 +149,12 @@ server <- function(input, output, session) {
   
   # select nifti directory
   shinyDirChoose(input, 'dirs', roots=volumes) #volumes)
-  
+  shinyDirChoose(input, 'folder', roots=volumes())
   # clinical file
   shinyFileChoose(input, 'clinical', roots=volumes,  filetype=c('txt','xlsx','xls','csv'),
                   session = session)
-  
-  
+  print(getwd())
+
   shinyFileChoose(input, 'gm_un', roots=volumes, filetype=c('nii','gz'),
                   session = session)
   shinyFileChoose(input, 'gm_fu', roots=volumes,  filetype=c('nii','gz'),
@@ -146,12 +164,6 @@ server <- function(input, output, session) {
   shinyFileChoose(input, 'wm_fu', roots=volumes,  filetype=c('nii','gz'),
                   session = session)
   
-  
-  
-  shinyFileChoose(input, 'wm_un', roots=volumes,  filetype=c('nii','gz'),
-                  session = session)
-  shinyFileChoose(input, 'wm_fu', roots=volumes,  filetype=c('nii','gz'),
-                  session = session)
   observe({
     shinyFileChoose(input, 'load_model', roots=volumes(),  filetype=c('rds'), session= session)
     req(input$load_model)
@@ -192,9 +204,8 @@ server <- function(input, output, session) {
                                  selected = mp$pred_var)
         updateCheckboxInput(session,inputId = 'ensemble_learning',value = mp$n_iterations>1)
         
-        # update model representation
-        variables_used<-.most_frequent_variables(model_list = mp$models,
-                                                 mp = mp)
+        # update model representation 
+        variables_used<-.most_frequent_variables(model_list=mp$models,mp = mp)
         mri_files$variables_used <- variables_used
         
       }
@@ -208,16 +219,15 @@ server <- function(input, output, session) {
     showModal(modalDialog(
       tagList(
         textInput("saveName", label = "Save name", placeholder = "test1")
+        
       ), 
       title="Select a name for your project",
       footer = tagList(actionButton("confirmCV", "Run"),
                        modalButton("Cancel")
       )
     ))
-    
   })
   observeEvent(input$run_fit, {
-    
     showModal(modalDialog(
       tagList(
         textInput("saveName", label = "Save name", placeholder = "test1")
@@ -227,10 +237,8 @@ server <- function(input, output, session) {
                        modalButton("Cancel")
       )
     ))
-    
   })
   observeEvent(input$run_predict, {
-    
     showModal(modalDialog(
       tagList(
         textInput("saveName", label = "Save name", placeholder = "test1")
@@ -240,15 +248,15 @@ server <- function(input, output, session) {
                        modalButton("Cancel")
       )
     ))
-    
   })
   
   # CALL: CV  
   observeEvent(input$confirmCV, {
+    browser()
     removeModal()
-    save_name <- sprintf('output/%s',input$saveName)
+    save_name <- sprintf('%s/%s',mri_files$folder, input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
-    save_name <- sprintf('%s/%s',save_name, input$saveName)
+    
     if(file.exists(sprintf("%s_list_folds_n%s.txt", save_name,mri_files$folds))){
       showModal(modalDialog(
         tagList(
@@ -272,30 +280,45 @@ server <- function(input, output, session) {
       mri_files$response=c("time","status")#c(mri_files$time,mri_files$status)
     }
     paths = cbind(mri_files$paths_gm_un, mri_files$paths_gm_fu, mri_files$paths_wm_un, mri_files$paths_wm_fu)
-    mp <- mripredict(paths, mri_files$clinical, mri_files$response, mri_files$covariates, mri_files$predictors, mri_files$response_family, mri_files$modulation, information_variables = information_variables)
-    withProgress(message = "Performing Cross-validation", value = 0, {
-      
-      mp <- mripredict_cv(mp, space = "NO_CHECK", save_name = save_name, folds_file = "", n_cores = 1, n_folds = mri_files$folds,
-                          use_significant_voxels = FALSE, use_ensemble_learning = mri_files$ensemble_learning, use_ensemble_voxels = mri_files$ensemble_learning, use_ensemble_subjects = FALSE, ide_shiny = TRUE)
-    })
-    mri_files$results <- mp$cv_results
-    write.csv(mp$cv_results, file = sprintf('output/%s/cv_results.csv', input$saveName), row.names = F)
-    mri_files$metrics <- mp$metrics
-    write.csv(mp$metrics, file=sprintf('output/%s/cv_metrics.txt', input$saveName), row.names = F)
-    variables_used<-.most_frequent_variables(model_list = mp$models,
-                                             mp = mp,
-                                             file = sprintf("%s_betas_summary.csv", save_name))
-    mri_files$variables_used <- variables_used
-    updateTabsetPanel(session, "allTabs",
-                      selected = "Results")
+    error_files = F
+    if (dim(paths)[1]==0 && mri_files$modulation!="clinical"){
+      showModal(modalDialog(title="Error","No images are selected. Please select images or change to Only clinical data mode"))
+      error_files = T
+    }
+    if (!error_files){
+      mp <- mripredict(paths, mri_files$clinical, mri_files$response, mri_files$covariates, mri_files$predictors, mri_files$response_family, mri_files$modulation, information_variables = information_variables)
+  
+      if(attr(mp, "status") != "OK") {
+        showModal(modalDialog(
+          title = "Data loading error",
+          attr(mp, "status")
+        ))
+      } else {
+        browser()
+        withProgress(message = "Performing Cross-validation", value = 0, {
+    
+          mp <- mripredict_cv(mp, space = "NO_CHECK", save_name = save_name, folds_file = "", n_cores = 1, n_folds = mri_files$folds,
+                              use_significant_voxels = FALSE, use_ensemble_learning = mri_files$ensemble_learning, use_ensemble_voxels = mri_files$ensemble_learning, use_ensemble_subjects = FALSE, ide_shiny = TRUE)
+        })
+        mri_files$results <- mp$cv_results
+        write.csv(mp$cv_results, file = sprintf('%s/cv_results.csv', save_name), row.names = F)
+        mri_files$metrics <- mp$metrics
+        write.csv(mp$metrics, file=sprintf('%s/cv_metrics.txt', save_name), row.names = F)
+        browser()
+        variables_used<-.most_frequent_variables(model_list=mp$models, mp = mp,
+                                                 file = sprintf("%s/%s_betas_summary.csv", save_name, input$saveName))
+        mri_files$variables_used <- variables_used
+        updateTabsetPanel(session, "allTabs",
+                          selected = "Results")
+      }
+    }
   })
   
   # CALL: FIT 
   observeEvent(input$confirmFit, {
     removeModal()
-    save_name <- sprintf('output/%s',input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
-    save_name <- sprintf('%s/%s',save_name, input$saveName)
+    save_name <- sprintf('%s/%s',mri_files$folder,input$saveName)
     if(file.exists(sprintf("%s_list_folds_n%s.txt", input$saveName,mri_files$folds))){
       showModal(modalDialog(
         tagList(
@@ -323,9 +346,8 @@ server <- function(input, output, session) {
     })
     mri_files$results <- mp$cv_results
     saveRDS(mp, sprintf("%s_model.rds",save_name))
-    variables_used<-.most_frequent_variables(model_list = mp$models,
-                                             mp = mp,
-                                             file = sprintf("%s_betas_summary.csv", save_name))
+    variables_used<-.most_frequent_variables(mp = mp,
+                                             file = sprintf("%s/%s_betas_summary.csv", save_name, input$saveName))
     mri_files$variables_used <- variables_used
     mri_files$mp <- mp
   })
@@ -344,7 +366,7 @@ server <- function(input, output, session) {
         )
       ))
     }
-    save_name <- sprintf('output/%s',input$saveName)
+    save_name <- sprintf('%s/%s',input$folder,input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
     print(mri_files$covariates)
     if(is.null(mri_files$covariates) || mri_files$covariates == 'None') mri_files$covariates <- ''
@@ -364,7 +386,7 @@ server <- function(input, output, session) {
       }
     })
     mri_files$results <- cbind(mp$prediction,paths,mri_files$clinical)
-    write.csv(x = mri_files$results, file = sprintf('%s_pred.csv',save_name))
+    write.csv(x = mri_files$results, file = sprintf('%s/%s_pred.csv',save_name, input$saveName))
     if(mp$response_family == 'binomial') {
       colnames(mri_files$results)[1] <- sprintf("Prediction (0 = %s; 1 = %s)",mp$response_ref, mp$response_event)
     } else {
@@ -420,27 +442,27 @@ server <- function(input, output, session) {
 
 ui <- dashboardPage(
   title="MRIPredict",
-  skin="red",
+  skin="purple",
   #useShinyalert(),
-  dashboardHeader(title=span(img(src="img/icon_back_w.png",height=50),"MRIPredict"),
+  dashboardHeader(title=span(img(src="icon_back_w.png",height=50),"MRIPredict"),
                   
-                  tags$li(
-                    a(
-                      span(icon('question-circle'),strong("ABOUT MRIPredict")),
-                      height = 40,
-                      href = "https://mripredict.com"
-                    ),
-                    class = "dropdown"
+                               tags$li(
+                                 a(
+                                   span(icon('question-circle'),strong("ABOUT MRIPredict")),
+                                   height = 40,
+                                   href = "https://mripredict.com"
+                                 ),
+                                 class = "dropdown"
+                               ),
+                                tags$li(
+                                  a(
+                                    span(icon('envelope'),strong("Contact")),
+                                    height = 40,
+                                    href = "mailto:solanes@clinic.cat"
+                                  ),
+                                  class = "dropdown"
+                                )
                   ),
-                  tags$li(
-                    a(
-                      span(icon('envelope'),strong("Contact")),
-                      height = 40,
-                      href = "mailto:solanes@clinic.cat"
-                    ),
-                    class = "dropdown"
-                  )
-  ),
   dashboardSidebar(
     sidebarMenu(
       menuItem("Configuration", tabName = "Configuration", icon = icon("flask")),
@@ -462,83 +484,94 @@ ui <- dashboardPage(
       # 1st tab
       tabItem(tabName = "Configuration", 
               fluidRow(
-                box(
-                  h4("Configuration"),
-                  selectInput('modulation','Input images',modulations),
-                  selectInput('modality','Family',families),
-                  conditionalPanel(
-                    condition = "input.modality == 'Cox'",
-                    selectInput('response_time','Time',response),
-                    selectInput('response_status','Status',response)
-                  ),
-                  conditionalPanel(
-                    condition = "input.modality != 'Cox'",
-                    selectInput('response','Response',response)
-                  ),
-                  #selectInput('response','Response',response),
-                  #selectInput('response_time','Time',response),
-                  #selectInput('response_status','Status',response),
-                  checkboxInput(
-                    inputId = 'ensemble_learning',
-                    label = 'Perform ensemble learning',
-                    value = FALSE
-                  ),
-                  checkboxGroupInput(inputId = 'covariates',label = 'Covariates',choices = covariates),
-                  checkboxGroupInput(inputId = 'predictors',label = 'Predictors',choices = predictors)
-                )
+                       box(
+                         h4("Configuration"),
+                         selectInput('modulation','Input images',modulations),
+                         selectInput('modality','Family',families),
+                         conditionalPanel(
+                           condition = "input.modality == 'Cox'",
+                           selectInput('response_time','Time',response),
+                           selectInput('response_status','Status',response)
+                         ),
+                         conditionalPanel(
+                           condition = "input.modality != 'Cox'",
+                           selectInput('response','Response',response)
+                         ),
+                         #selectInput('response','Response',response),
+                         #selectInput('response_time','Time',response),
+                         #selectInput('response_status','Status',response),
+                         checkboxInput(
+                           inputId = 'ensemble_learning',
+                           label = 'Perform ensemble learning',
+                           value = FALSE
+                         ),
+                         checkboxGroupInput(inputId = 'covariates',label = 'Covariates',choices = covariates),
+                         checkboxGroupInput(inputId = 'predictors',label = 'Predictors',choices = predictors)
+                       )
                 ,
                 box(
-                  h4("Input images"),
-                  conditionalPanel(
-                    condition = "input.modulation != 'Only clinical'",
-                    shinyFilesButton('gm_un', label='Gray matter', title='Please select GM unmodulated files', multiple=TRUE),
-                    h6(textOutput("gm_selected"))
-                  ),
-                  conditionalPanel(
-                    condition = "input.modulation != 'Only clinical' && input.modulation != '1 image (GM or WM)'",
-                    shinyFilesButton('gm_fu', label='Gray matter modulated', title='Please select GM modulated files', multiple=TRUE),
-                    h6(textOutput("gmfu_selected"))
-                  ),
-                  conditionalPanel(
-                    condition = "input.modulation == '4 images (GM + GM modulated + WM + WM modulated)'",
-                    shinyFilesButton('wm_un', label='White matter', title='Please select WM unmodulated files', multiple=TRUE),
-                    h6(textOutput("wm_selected")),
-                    shinyFilesButton('wm_fu', label='White matter modulated', title='Please select WM modulated files', multiple=TRUE),
-                    h6(textOutput("wmfu_selected"))
+                  h4("Output folder"),
+                  h6(textOutput("output_folder_selected")),
+                  shinyDirButton('folder', label='Folder', title='Please select where you want to save results', multiple=F, viewtype="detail"),
+                  checkboxInput(
+                    inputId = 'folder_cwd',
+                    label = 'Select current working directory',
+                    value = FALSE
                   )
-                  # , shinyFilesButton('gm_fu', label='Gray matter modulated', title='Please select GM modulated files', multiple=TRUE),
-                  # h6(textOutput("gmfu_selected")),
-                  # shinyFilesButton('wm_un', label='White matter', title='Please select WM unmodulated files', multiple=TRUE),
-                  # h6(textOutput("wm_selected")),
-                  # shinyFilesButton('wm_fu', label='White matter modulated', title='Please select WM modulated files', multiple=TRUE),
-                  # h6(textOutput("wmfu_selected"))
-                ),
-                #actionButton("files", "File select", class = "btn-lg btn-success"),
-                #shinyDirButton('dirs',label='Folder containing images', title='Please select the folder where the images are stored'),
-                box(
-                  h4("Clinical information"),
-                  shinyFilesButton('clinical', label='Clinical file', title='Please select the clinical file', multiple=FALSE),
-                  h6('File selected:'),
-                  textOutput("txt_file")
-                ),
-                br(),br(),
-                box(
-                  sliderInput("folds", "Number of folds:", min = 3, max = 10, value = 10),
-                  actionButton("run_cv", "Cross-validation", class = "btn-lg btn-success")
-                ),
-                box(
-                  #actionButton("run_cv", "Cross-validation", class = "btn-lg btn-success"),
-                  actionButton("run_fit", "Train model", class = "btn-lg btn-success"),
-                  #actionButton("load_model", "Load model", class = "btn-lg btn-success"),
-                  shinyFilesButton('load_model', label='Load model', title='Select a .rds model', multiple=FALSE),
-                  textOutput("txt_model"),
-                  actionButton("run_predict", "Apply model", class = "btn-lg btn-success")
                 )
-                
+                ,
+                       box(
+                         h4("Input images"),
+                         conditionalPanel(
+                           condition = "input.modulation != 'Only clinical'",
+                           shinyFilesButton('gm_un', label='Gray matter', title='Please select GM unmodulated files', multiple=TRUE, viewtype="detail"),
+                           h6(textOutput("gm_selected"))
+                         ),
+                         conditionalPanel(
+                           condition = "input.modulation != 'Only clinical' && input.modulation != '1 image (GM or WM)'",
+                           shinyFilesButton('gm_fu', label='Gray matter modulated', title='Please select GM modulated files', multiple=TRUE, viewtype="detail"),
+                           h6(textOutput("gmfu_selected"))
+                         ),
+                         conditionalPanel(
+                           condition = "input.modulation == '4 images (GM + GM modulated + WM + WM modulated)'",
+                           shinyFilesButton('wm_un', label='White matter', title='Please select WM unmodulated files', multiple=TRUE, viewtype="detail"),
+                           h6(textOutput("wm_selected")),
+                           shinyFilesButton('wm_fu', label='White matter modulated', title='Please select WM modulated files', multiple=TRUE, viewtype="detail"),
+                           h6(textOutput("wmfu_selected"))
+                         )#,
+                         # shinyFilesButton('gm_fu', label='Gray matter modulated', title='Please select GM modulated files', multiple=TRUE),
+                         # h6(textOutput("gmfu_selected")),
+                         # shinyFilesButton('wm_un', label='White matter', title='Please select WM unmodulated files', multiple=TRUE),
+                         # h6(textOutput("wm_selected")),
+                         # shinyFilesButton('wm_fu', label='White matter modulated', title='Please select WM modulated files', multiple=TRUE),
+                         # h6(textOutput("wmfu_selected"))
+                       ),
+                       #actionButton("files", "File select", class = "btn-lg btn-success"),
+                       #shinyDirButton('dirs',label='Folder containing images', title='Please select the folder where the images are stored'),
+                       box(
+                         h4("Clinical information"),
+                         shinyFilesButton('clinical', label='Clinical file', title='Please select the clinical file', multiple=FALSE),
+                         h6('File selected:'),
+                         textOutput("txt_file")
+                       ),
+                       br(),br(),
+                       box(
+                        sliderInput("folds", "Number of folds:", min = 3, max = 10, value = 10),
+                        actionButton("run_cv", "Cross-validation", class = "btn-lg btn-success")
+                       ),
+                       box(
+                         #actionButton("run_cv", "Cross-validation", class = "btn-lg btn-success"),
+                         actionButton("run_fit", "Train model", class = "btn-lg btn-success"),
+                         #actionButton("load_model", "Load model", class = "btn-lg btn-success"),
+                         shinyFilesButton('load_model', label='Load model', title='Select a .rds model', multiple=FALSE),
+                         textOutput("txt_model"),
+                         actionButton("run_predict", "Apply model", class = "btn-lg btn-success")
+                       )
+                       
                 
                 
               ))
-      ,
+              ,
       # 2nd tab
       tabItem(tabName = "Data",
               fluidRow(
@@ -553,13 +586,13 @@ ui <- dashboardPage(
       # 3rd tab
       tabItem(tabName = "Results",
               fluidRow(
-                column(12,
-                       h4('Cross-validation metrics'),
-                       DT::dataTableOutput('metrics')),
-                column(3,
-                       h4('Results'),
-                       DT::dataTableOutput('results'))
-              )),
+                                       column(12,
+                                              h4('Cross-validation metrics'),
+                                              DT::dataTableOutput('metrics')),
+                                       column(3,
+                                              h4('Results'),
+                                              DT::dataTableOutput('results'))
+                                     )),
       # 4th tab
       tabItem(tabName = "Model",
               fluidRow(
@@ -572,15 +605,18 @@ ui <- dashboardPage(
                 box(span("This software has been developed by Joaquim Radua and Aleix Solanes from ",strong(a("IMARD Group", href="https:imardgroup.com")), " - IDIBAPS, Hospital Clinic de Barcelona")),
                 box(
                   strong(a("Joaquim Radua", href='https://pubmed.ncbi.nlm.nih.gov/?term=Radua+J&cauthor_id=32454268'))
-                ),
+                  ),
                 box(
                   strong(a("Aleix Solanes", href='https://pubmed.ncbi.nlm.nih.gov/?term=Solanes+A&cauthor_id=33831461')),
                   br(),
                   "Mail:", a("solanes@clinic.cat", href="mailto:solanes@clinic.cat")
-                )
+                  )
               ))
     )
+    ,useShinyjs()
+    ,useShinyalert()
   )
+  
 )
 
 

@@ -3,7 +3,7 @@ seleccio_covariables_data.frame2glmnet.matrix_fit = function (x, covariates) {
   if (any(is.na(j))){
     stop(paste("Covariate", covariates[which(is.na(j))], "not found"))
   } 
-  x = x[,j]
+  x = as.data.frame(x[,j,drop=FALSE])
   for (j in 1:ncol(x)) {
     x[,j] = factor(x[,j])
   }

@@ -9,7 +9,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
   .require("doParallel")
   # .require("parallel")
   .require("logistf")
-  #.require("doSNOW") # dubtós 
+  #.require("doSNOW") # dubt?s 
   SIGNIFICANCE_THRESHOLD = qnorm(0.975)
   #n_folds = 10
   if (use_ensemble_learning) {
@@ -18,6 +18,8 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
     N_ITERATIONS = 1
   }
   N_M_IMPUTATIONS = 20 # multiple imputations
+
+  
   # if save_name does not contain any folder, let's save it in output folder
   if(!grepl("/", save_name, fixed = TRUE)){
     if(!dir.exists(paste0("output/",save_name)))
@@ -107,7 +109,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
     # if empty folds file name
     list_folds = NULL
   }
-  
+
   if (is.null(list_folds)) {
     message('No folds file preloaded. New folds distribution will be created.')
     assigned_fold = assign.folds(y = Y, family = mp$response_family, nfolds = n_folds, site = sites)
@@ -171,8 +173,9 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
   model_counter = 1
   time_points = c(30, 60, 180, 360, 720)
   for (fold in 1:n_folds) {
-    
-    if (!file.exists(sprintf('%s_fold%s.Rdata', save_name, fold))){
+    rdata_file = Sys.glob(sprintf('%s_fold*.Rdata', save_name))
+
+    if (length(rdata_file) == 0){
       
       cat(paste("Starting fold", fold, "of", n_folds),"...\n")
       
@@ -261,7 +264,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
           preds = c()
           
           for (iter_imputation in 1:n_multiple_imputations) {    
-            
+            gc()
             if (n_multiple_imputations > 1) {
               data_table_imputed_train = imp.data_informative_table_train[[iter_imputation]]
               #data_table_imputed_test = as.matrix(imp.data_informative_table_test[[iter_imputation]])
@@ -269,7 +272,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
             if (n_multiple_imputations > 1)
               .print_action(paste("Fold:",fold,"Imputation", iter_imputation, "of", n_multiple_imputations, "\n", save_name))
             
-  
+            
             model_list = fit_model(mp = mp,
                                    data_informative_table = data_table_imputed_train,
                                    Y = trainY,
@@ -287,11 +290,12 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
                                    #name_combat = name_combat,
                                    standardize_images = standardize_images
             )
+
             mp$combat = model_list$combat
             if (!mp$modulation %in% c('cl','clinical')) {
               # per passar a mni la ijk =>  mp$mni = (mri$sto.xyz %*% mp$ijk)[1:3, ]          
               lasso_ijk = matrix(model_list$lasso_ijk, nrow = 3)
-              # lasso_ijk està amb totes les imatges juntes
+              # lasso_ijk est? amb totes les imatges juntes
               ##############################################################
               dim_x = dim(mri$data)[1]
               if (mp$modulation == 'fu') {
@@ -410,7 +414,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
                                                                              use_significant_voxels = use_significant_voxels,
                                                                              #covX_site = sites_training[[any_status_at_time_point]],
                                                                              covX_site = sites_training[any_status_at_time_point],
-                                                                             masks_3d = model_list$masks_3d, # ALEIX, AIXÒ ÉS PEL COMBAT, POTSER NO HO NECESSITAREM,
+                                                                             masks_3d = model_list$masks_3d, # ALEIX, AIX? ?S PEL COMBAT, POTSER NO HO NECESSITAREM,
                                                                              #name_combat = name_combat,
                                                                              n_voxels_mask = n_voxels_mask,
                                                                              combat = model_list$combat,
@@ -424,7 +428,8 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
             }
             
             
-            mp$models[[model_counter]] <- model_list 
+            mp$models[[model_counter]] <- model_list
+            model_list <- NULL # free memory
             model_counter <- model_counter + 1
             ###########################################################################################################################################################
             .print_ok()
@@ -459,21 +464,21 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
                                   signif_indx = signif_indx,
                                   lasso_covB = lasso_covB,
                                   lasso_covB_fu = lasso_covB_fu,
-                                  mask = model_list$mask,
+                                  mask = mp$models[[model_counter-1]]$mask,
                                   predX_test = predX_test,
                                   scale_clinical = scale_clinical,
                                   scale_mri = scale_mri,
-                                  lasso = model_list$lasso,
-                                  lasso_predX_indx = model_list$lasso_predX_indx,
+                                  lasso = mp$models[[model_counter-1]]$lasso,
+                                  lasso_predX_indx = mp$models[[model_counter-1]]$lasso_predX_indx,
                                   tipett_take_un = tipett_take_un,
                                   img_kappa = NULL,
                                   use_significant_voxels = use_significant_voxels,
                                   covX_site = sites_test,
-                                  masks_3d = model_list$masks_3d, # ALEIX, AIXÒ ÉS PEL COMBAT, POTSER NO HO NECESSITAREM,
+                                  masks_3d = mp$models[[model_counter-1]]$masks_3d, # ALEIX, AIX? ?S PEL COMBAT, POTSER NO HO NECESSITAREM,
                                   #name_combat = name_combat,
                                   n_voxels_mask = n_voxels_mask,
                                   standardize_images = standardize_images,
-                                  combat = model_list$combat
+                                  combat = mp$models[[model_counter-1]]$combat
               )
               test_preds = cbind(test_preds, preds)
             }
@@ -484,7 +489,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
           }
           # fi for n_multiple_imputations  
           
-         
+          
           
           # average of linear predictors in multiple_imputation
           linPred = matrix(rowMeans(linPreds))
@@ -569,7 +574,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
           # }
         }
         else {
-          cat('Skipping fold: ', fold, ' Iteration: ', iter, '\n') # aquí hauriem de carregar a cv_table... el fitxer .csv que ha trobat guardat
+          cat('Skipping fold: ', fold, ' Iteration: ', iter, '\n') # aqu? hauriem de carregar a cv_table... el fitxer .csv que ha trobat guardat
           res_csv = read.csv(sprintf("%s_iteration%d_%s_results_fold%d.csv", save_name, iter, mp$response_family, fold))
           cv_table_predictions = rbind(cv_table_predictions, res_csv)
           name_base <- sprintf("%s_model_FOLD_%d", save_name,fold)
@@ -582,7 +587,10 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
       # save rds
       cat('\n[Saving] - Saving fold model to',sprintf("%s_model_FOLD_%d", save_name,fold))
       name_base <- sprintf("%s_model_FOLD_%d", save_name,fold)
-      if(fold>0) name_base_previous <- sprintf("%s_model_FOLD_%d", save_name,fold-1)
+      if(fold>1) {
+        name_base_previous <- sprintf("%s_model_FOLD_%d", save_name,fold-1)
+        file.remove(sprintf("%s_mp.rds", name_base_previous))
+      }
       saveRDS(object = mp, file = sprintf("%s_mp.rds", name_base))
       #saveRDS(object = mp$models, file = sprintf("%s_model_list.rds", name_base))
       #file.remove(sprintf("%s_mp.rds", name_base_previous))
@@ -614,10 +622,14 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
         
       }
       message("\n[Fold ended] - Time per fold:", difftime(Sys.time(), start_fold.time, units = 'mins'), ' mins.')
-      save(list=ls(), 
-           file =sprintf('%s_fold%s.Rdata', save_name, fold))
+      # save(list=ls(), 
+      #      file =sprintf('%s_fold%s.Rdata', save_name, fold))
+      # if(fold>1)
+      #   file.remove(sprintf('%s_fold%s.Rdata', save_name, fold-1))
     }
     else{
+      fold = gsub(sprintf('%s_fold', save_name), "", rdata_file)
+      fold = max(as.numeric(gsub(".Rdata","", fold)))
       load(sprintf('%s_fold%s.Rdata', save_name, fold))
     }
   }
@@ -660,7 +672,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
   mp$cv_table = cv_table;
   mp$cv_accuracy = cv_accuracy;
   #;
-
+  
   mp$cv_betas = cv_betas;
   mp$subjects_used = subjects_used;
   cat("\n[End] - FOLDS performance:", cv_accuracy, "\n")
@@ -708,8 +720,9 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
   cat('\n[Saving] - Saving MRIPredict object to:', sprintf('%s_mp.rds',save_name))
   mp$cv_results = mp$cv_results[order(mp$cv_results$id),]
   saveRDS(mp,file=sprintf('%s_mp.rds',save_name))
+  file.remove(sprintf('%s_mp.rds',save_name))
   #file.remove(sprintf("%s_model_FOLD_%s_model_list.rds", save_name,n_folds))
-  file.remove(sprintf("%s_model_FOLD_%s_mp.rds",save_name,n_folds-1))
+  file.remove(sprintf("%s_model_FOLD_%s_mp.rds",save_name,n_folds))
   mp
 }
 
