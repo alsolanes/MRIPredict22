@@ -271,7 +271,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
             }
             if (n_multiple_imputations > 1)
               .print_action(paste("Fold:",fold,"Imputation", iter_imputation, "of", n_multiple_imputations, "\n", save_name))
-            
+            browser()
             model_list = fit_model(mp = mp,
                                    data_informative_table = data_table_imputed_train,
                                    Y = trainY,
@@ -704,7 +704,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
     colnames(mp$cv_results) = c('id', 'pred', 'real', 'fold', 'iteration')
     mp$cv_results = aggregate(mp$cv_results[, 2:4], list(mp$cv_results$id), mean)
     colnames(mp$cv_results) = c('id', 'prediction', 'real', 'fold')
-    mp$metrics = sqrt(mean((mp$cv_results$prediction - mp$cv_results$real) ^ 2))
+    mp$metrics = data.frame(Measure="RMSE",Value=sqrt(mean((mp$cv_results$prediction - mp$cv_results$real) ^ 2)))
     cat(sprintf("Mean RMSE: %f", mp$metrics), file = sprintf("%s_gaussian.txt", save_name))
   } else {
     write.csv(mp$cv_results, sprintf("%s_bin_raw.csv",save_name),row.names = F)
