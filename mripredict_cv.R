@@ -708,7 +708,7 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
     mp$metrics = sqrt(mean((mp$cv_results$prediction - mp$cv_results$real) ^ 2))
     cat(sprintf("Mean RMSE: %f", mp$metrics), file = sprintf("%s_gaussian.txt", save_name))
   } else {
-    write.csv(mp$cv_results, sprintf("%s_bin_raw.csv",save_name))
+    write.csv(mp$cv_results, sprintf("%s_bin_raw.csv",save_name),row.names = F)
     mp$cv_results = aggregate(mp$cv_results[, 2:5], list(mp$cv_results$id), mean)
     colnames(mp$cv_results) = c('id', 'linear_predictor', 'probability', 'real', 'fold')
     mp$metrics <- .metrics_binary(mp$cv_results$real, mp$cv_results$probability > bin_threshold)

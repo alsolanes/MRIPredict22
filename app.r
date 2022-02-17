@@ -82,7 +82,7 @@ server <- function(input, output, session) {
   mri_files <- reactiveValues(paths=NULL)
   observe({
     if(!is.null(input$folder)){
-      mri_files$folder <- as.character(parseFilePaths(roots = volumes, input$folder)$datapath)
+      mri_files$folder <- as.character(parseDirPath(roots = volumes, input$folder))
       output$output_folder_selected <- renderText({sprintf('Output folder: %s .', mri_files$folder)})
       #out_table$GM_unmodulated <- mri_files$paths_gm_un
     }
@@ -301,7 +301,7 @@ server <- function(input, output, session) {
         mri_files$results <- mp$cv_results
         write.csv(mp$cv_results, file = sprintf('%s/cv_results.csv', save_name), row.names = F)
         mri_files$metrics <- mp$metrics
-        write.csv(mp$metrics, file=sprintf('%s/cv_metrics.txt', save_name), row.names = F)
+        write.csv(mp$metrics, file=sprintf('%s/cv_metrics.csv', save_name), row.names = F)
         variables_used<-.most_frequent_variables(model_list=mp$models, mp = mp,
                                                  file = sprintf("%s/%s_betas_summary.csv", save_name, input$saveName))
         mri_files$variables_used <- variables_used
