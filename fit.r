@@ -328,7 +328,7 @@ fit_model = function(mp, data_informative_table , Y, mri, mri_fu, preloaded_covB
       HIST = hist(SD, plot = FALSE, breaks =  100) # Histogram of SD - there is a mixture of ~constant 0 and a normal with mean = ~0.06
       LOWESS = lowess(HIST$mids, HIST$density) # Lowess to remove irregularities that would prevent us from finding the peak of the normal distribution
       scale_clinical$MODE_SD = LOWESS$x[which(LOWESS$y == max(LOWESS$y[-1:-10]))]
-      
+    
       # Scale clinical variables (e.g. covX) in the training dataset
       scale_clinical$MEANS = apply(predX_train, 2, mean) # Calculate the mean of each covariate / as.matrix used because errors when one single predictor var selected
       predX_train = as.matrix(apply(predX_train, 1, function(x) {x - scale_clinical$MEANS})) # Center the covariates

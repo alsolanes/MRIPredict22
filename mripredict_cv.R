@@ -271,7 +271,6 @@ mripredict_cv = function(mp, space = "MNI", save_name = "results_cv", preloaded_
             }
             if (n_multiple_imputations > 1)
               .print_action(paste("Fold:",fold,"Imputation", iter_imputation, "of", n_multiple_imputations, "\n", save_name))
-            browser()
             model_list = fit_model(mp = mp,
                                    data_informative_table = data_table_imputed_train,
                                    Y = trainY,
