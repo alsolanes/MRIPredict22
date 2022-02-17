@@ -243,40 +243,40 @@
   out
 }
 .most_frequent_variables <- function(model_list, mp = NULL, file=NULL) {
-
+  
   mnis = list(gm=NULL, gm_mod = NULL, wm = NULL, wm_mod = NULL)
   out = data.frame(mni_or_variable = NULL, ijk=NULL,modality = NULL, beta = NULL)
   # iterate through 
   for(i in seq_len(length(model_list))) {
-    tmp <- data.frame(mni_or_variable=NULL, modality=NULL)
+    tmp <- data.frame(mni_or_variable=NULL, modality=NULL, betas=NULL)
     if(length(model_list[[i]]$lasso_mni$gm)>0){
       model_list[[i]]$lasso_mni$gm <- matrix(model_list[[i]]$lasso_mni$gm, nrow = 3)
       gm <- paste(model_list[[i]]$lasso_mni$gm[1,], model_list[[i]]$lasso_mni$gm[2,], model_list[[i]]$lasso_mni$gm[3,], sep="_")
       mnis$gm <- c(mnis$gm, gm)
-      tmp <- data.frame(mni_or_variable=gm, modality='gm')
+      tmp <- rbind(data.frame(mni_or_variable=gm, modality='gm', betas = model_list[[i]]$lasso_mni$gm_betas))
     }
     if(length(model_list[[i]]$lasso_mni$gm_mod)>0){
       model_list[[i]]$lasso_mni$gm_mod <- matrix(model_list[[i]]$lasso_mni$gm_mod, nrow = 3)
       gm_mod <- paste(model_list[[i]]$lasso_mni$gm_mod[1,], model_list[[i]]$lasso_mni$gm_mod[2,], model_list[[i]]$lasso_mni$gm_mod[3,], sep="_")
       mnis$gm_mod <- c(mnis$gm_mod, gm_mod)
-      tmp <- rbind(tmp, data.frame(mni_or_variable=gm_mod, modality='gm_mod'))
+      tmp <- rbind(tmp, data.frame(mni_or_variable=gm_mod, modality='gm_mod', betas = model_list[[i]]$lasso_mni$gm_mod_betas))
     }
     if(length(model_list[[i]]$lasso_mni$wm)>0){
       model_list[[i]]$lasso_mni$wm <- matrix(model_list[[i]]$lasso_mni$wm, nrow = 3)
       wm <- paste(model_list[[i]]$lasso_mni$wm[1,], model_list[[i]]$lasso_mni$wm[2,], model_list[[i]]$lasso_mni$wm[3,], sep="_")
       mnis$wm <- c(mnis$wm, wm)
-      tmp <- rbind(tmp, data.frame(mni_or_variable=wm, modality='wm'))
+      tmp <- rbind(tmp, data.frame(mni_or_variable=wm, modality='wm', betas = model_list[[i]]$lasso_mni$wm_betas))
     }
     if(length(model_list[[i]]$lasso_mni$wm_mod)>0){
       model_list[[i]]$lasso_mni$wm_mod <- matrix(model_list[[i]]$lasso_mni$wm_mod, nrow = 3)
       wm_mod <- paste(model_list[[i]]$lasso_mni$wm_mod[1,], model_list[[i]]$lasso_mni$wm_mod[2,], model_list[[i]]$lasso_mni$wm_mod[3,], sep="_")
       mnis$wm_mod <- c(mnis$wm_mod, wm_mod)
-      tmp <- rbind(tmp, data.frame(mni_or_variable=wm_mod, modality='wm_mod'))
+      tmp <- rbind(tmp, data.frame(mni_or_variable=wm_mod, modality='wm_mod', betas = model_list[[i]]$lasso_mni$wm_mod_betas))
     }
     # mni, modality, betas, fold
     
     if(nrow(tmp)>0)
-      tmp <- cbind(tmp,data.frame(betas = model_list[[i]]$lasso$beta[c(1:nrow(tmp))], fold=i))
+      tmp <- cbind(tmp,data.frame(fold=i))
     
     if(length(model_list[[i]]$lasso_predX_indx)>0) {# when multiple predictors fails
       #predictor_vars = sapply(mp$pred_transf, function(x) x[1]) # take all variable names
@@ -289,9 +289,11 @@
     # sample
     
     out <- rbind(out, tmp)
+
   }
   if(!is.null(file))
-    write.csv(out, file=file)
+    write.csv(out, file=file, row.names = F)
+  rownames(out)<-NULL
   out
 }
 .most_frequent_variables_ijk <- function(model_list, mp = NULL, file=NULL) {
@@ -311,11 +313,11 @@
     
     if(nrow(tmp)>0)
       model_list[[i]]$lasso_covB = as.matrix(model_list[[i]]$lasso_covB)
-      tmp <- cbind(tmp, data.frame(betas = model_list[[i]]$lasso$beta[c(1:nrow(tmp))], 
-                                   fold=i,
-                                   covB_intercept = model_list[[i]]$lasso_covB[1,],
-                                   covB_age = model_list[[i]]$lasso_covB[2,],
-                                   covB_sex = model_list[[i]]$lasso_covB[3,]))
+    tmp <- cbind(tmp, data.frame(betas = model_list[[i]]$lasso$beta[c(1:nrow(tmp))], 
+                                 fold=i,
+                                 covB_intercept = model_list[[i]]$lasso_covB[1,],
+                                 covB_age = model_list[[i]]$lasso_covB[2,],
+                                 covB_sex = model_list[[i]]$lasso_covB[3,]))
     
     # predictor variables
     if(length(model_list[[i]]$lasso_predX_indx)>0) {# when multiple predictors fails
@@ -377,6 +379,7 @@
                        fn = fn,
                        tn = tn,
                        ppv = tp/(tp+fp),
+                       npv = tn/(tn+fn),
                        sensitivity = acc_class1,
                        specificity = acc_class2,
                        bac = bac)
@@ -385,7 +388,7 @@
   metric
 }
 .metrics_cox = function (results, frontier_time, iteration = 1, folder="", save=TRUE) {
-
+  
   sorted_results = results[order(results$linear_predictor),] # sort by second col, linear predictor
   sorted_results_desc = results[order(results$linear_predictor, decreasing = TRUE),] # sort by second col, linear predictor
   idx_g1 = which(results$time < frontier_time & !is.na(results$linear_predictor) & results$status == 1)
@@ -396,11 +399,11 @@
     g1_th_linPred = sorted_results_desc$linear_predictor[dim(g1)[1]]
     g2_th_linPred = sorted_results$linear_predictor[dim(g2)[1]]
     th_linPred = (g1_th_linPred + g2_th_linPred) / 2
-
+    
     #th_linPred = sorted_results_desc$linear_predictor[ceiling(dim(g2)[1] / 2)] # this 2 can be changed by a parameter to priorize sensitiviy or specificity
     g1_predicted = g1$linear_predictor >= th_linPred # these should have increased risk
     g2_predicted = !(g2$linear_predictor < th_linPred) # reduced risk
-
+    
     g12 = rbind(g1,g2)
     g12_predicted = c(g1_predicted, g2_predicted)
     perf = .metrics_binary(g12[,ncol(g12)],g12_predicted)
@@ -415,7 +418,7 @@
     else
       write.csv(results,sprintf("%s_cox_results.csv",folder), row.names = FALSE)
   }
-
+  
   perf
 }
 ijk2mni <- function(ijk,sto_ijk){

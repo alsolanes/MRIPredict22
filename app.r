@@ -253,7 +253,8 @@ server <- function(input, output, session) {
   # CALL: CV  
   observeEvent(input$confirmCV, {
     removeModal()
-    save_name <- sprintf('%s/%s',mri_files$folder, input$saveName)
+    if(length(mri_files$folder)==0) save_name <- sprintf("output/%s", input$saveName)
+    else save_name <- sprintf('%s/%s',mri_files$folder, input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
     
     if(file.exists(sprintf("%s_list_folds_n%s.txt", save_name,mri_files$folds))){
@@ -314,8 +315,9 @@ server <- function(input, output, session) {
   # CALL: FIT 
   observeEvent(input$confirmFit, {
     removeModal()
+    if(length(mri_files$folder)==0) save_name <- sprintf("output/%s", input$saveName)
+    else save_name <- sprintf('%s/%s',mri_files$folder, input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
-    save_name <- sprintf('%s/%s',mri_files$folder,input$saveName)
     if(file.exists(sprintf("%s_list_folds_n%s.txt", input$saveName,mri_files$folds))){
       showModal(modalDialog(
         tagList(
@@ -333,7 +335,7 @@ server <- function(input, output, session) {
     if(is.null(mri_files$ensemble_learning)) mri_files$ensemble_learning = F
     information_variables = c(mri_files$covariates, mri_files$predictors)
     print(information_variables)
-    print(sprintf("%s_list_folds_n%s.txt", input$saveName,mri_files$folds))
+    print(sprintf("%s/%s_list_folds_n%s.txt", save_name, input$saveName,mri_files$folds))
     
     paths = cbind(mri_files$paths_gm_un, mri_files$paths_gm_fu, mri_files$paths_wm_un, mri_files$paths_wm_fu)
     mp <- mripredict(paths, mri_files$clinical, mri_files$response, mri_files$covariates, mri_files$predictors, mri_files$response_family, mri_files$modulation, information_variables = information_variables)
@@ -342,8 +344,8 @@ server <- function(input, output, session) {
       mp <- mripredict_fit(mp = mp, space = "NO_CHECK", n_cores=1, use_ensemble_learning = mri_files$ensemble_learning, use_ensemble_voxels = mri_files$ensemble_learning)
     })
     mri_files$results <- mp$cv_results
-    saveRDS(mp, sprintf("%s_model.rds",save_name))
-    variables_used<-.most_frequent_variables(mp = mp,
+    saveRDS(mp, sprintf("%s/%s_model.rds",save_name,input$saveName))
+    variables_used<-.most_frequent_variables(model_list = mp$models, mp = mp,
                                              file = sprintf("%s/%s_betas_summary.csv", save_name, input$saveName))
     mri_files$variables_used <- variables_used
     mri_files$mp <- mp
@@ -363,7 +365,8 @@ server <- function(input, output, session) {
         )
       ))
     }
-    save_name <- sprintf('%s/%s',input$folder,input$saveName)
+    if(length(mri_files$folder)==0) save_name <- sprintf("output/%s", input$saveName)
+    else save_name <- sprintf('%s/%s',mri_files$folder, input$saveName)
     if(!dir.exists(save_name)) dir.create(save_name)
     print(mri_files$covariates)
     if(is.null(mri_files$covariates) || mri_files$covariates == 'None') mri_files$covariates <- ''

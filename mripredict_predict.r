@@ -17,12 +17,11 @@ mripredict_predict = function(mp, mri_paths_file = "", mri_fu_paths_file = "", d
   }
   #####################################################################################
   
-  
   .print_action("Setting new MRIPredict model")
   mri_paths = ""
   mri_fu_paths = ""
   if (length(mri_paths_file)<=2){
-    if (mri_paths_file != '') {
+    if (mri_paths_file != '' && dim(mri_paths_file)[1]!=0) {
       if(file.exists(mri_paths_file)) {
         mri_paths = .read_1col_file(mri_paths_file)
         mri_fu_paths = .read_2col_file(mri_paths_file)
@@ -36,7 +35,7 @@ mripredict_predict = function(mp, mri_paths_file = "", mri_fu_paths_file = "", d
   } else{
     mri_paths = mri_paths_file
   }
-  if (data_table_file!=""){
+  if (data_table_file!="" && dim(data_table_file)[1]!=0){
     if (length(data_table_file)==1){
       data_table = .read_data_table(data_table_file)
     } else {
@@ -68,13 +67,19 @@ mripredict_predict = function(mp, mri_paths_file = "", mri_fu_paths_file = "", d
   }
   
   .print_action("Creating response vector and covariate matrix")
-  
   ## define covariates matrix
-  if(!is.null(mp$covX_transf)){
-    covX = .create_covX(data_table, mp$covX_transf, mri$n) # mri$n is the number of subjects, which is not present in data_table if there are no covariates
-  }  else{
-    covX = matrix(1,nrow(data_table_file))
-  }
+  # if(!is.null(mp$covX_transf)){
+  #   covX = .create_covX(data_table, mp$covX_transf, mri$n) # mri$n is the number of subjects, which is not present in data_table if there are no covariates
+  # }  else{
+  #   covX = matrix(1,nrow(data_table_file))
+  # }
+  
+  n_subjects = nrow(data_table)
+  ## define covariates matrix
+  if(!is.null(mp$covX_transf))
+    covX = .create_covX(data_table, mp$covX_transf)
+  #data_informative_table = .create_covX(mp$data_table, mp$data_table_transf)
+
   sites = NULL
   if(!is.null(mp$data_table_transf)){
     

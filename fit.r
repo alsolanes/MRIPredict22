@@ -19,7 +19,6 @@ fit_model = function(mp, data_informative_table , Y, mri, mri_fu, preloaded_covB
   #   data_table_imputed_train = data_informative_table
   # }
   #
-
   if(!is.null(data_informative_table)){
     if (ncol(data_informative_table)>1) { # if there are more than one variable
       covX_training = as.matrix(cbind(1,data_informative_table[,mp$covX_var]))
