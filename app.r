@@ -610,8 +610,6 @@ ui <- dashboardPage(
                   )
               ))
     )
-    ,useShinyjs()
-    ,useShinyalert()
   )
   
 )
